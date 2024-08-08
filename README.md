@@ -2,8 +2,9 @@
 ## An Official Implementation for KDD-25 submission
 
 ### Environment
-Create a Python 3.8 environment using [href](requirements.txt)
+Create a Python 3.8 environment using [requirements.txt](requirements.txt)
 
+Training Data will be shared by Google Drive link after rebuttal.
 
 ### Reproduce the result
 change [backbone] to [GRU, LSTM, GATs, RSR, HIST]
