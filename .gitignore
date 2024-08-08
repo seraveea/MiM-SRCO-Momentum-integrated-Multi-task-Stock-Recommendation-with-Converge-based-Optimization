@@ -1,4 +1,5 @@
 exp/*.ipynb
+.DS_Store
 data
 output
 scripts

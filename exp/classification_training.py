@@ -19,7 +19,7 @@ import pandas as pd
 from torch.utils.tensorboard import SummaryWriter
 import sys
 sys.path.insert(0, sys.path[0]+"/../")
-from models.model import MLP, HIST, GRU, LSTM, GAT, ALSTM, RSR
+from models.model import MLP, HIST, GRU, LSTM, GAT, RSR
 from utils.utils import cross_entropy, generate_label, evaluate_mc, class_approxNDCG
 from utils.dataloader import create_mtm_loaders
 import warnings
@@ -46,9 +46,6 @@ def get_model(model_name):
 
     if model_name.upper() == 'GATS':
         return GAT
-
-    if model_name.upper() == 'ALSTM':
-        return ALSTM
 
     if model_name.upper() == 'HIST':
         return HIST

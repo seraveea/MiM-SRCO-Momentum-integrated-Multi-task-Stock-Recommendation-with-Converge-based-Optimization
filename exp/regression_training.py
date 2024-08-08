@@ -16,7 +16,7 @@ import pandas as pd
 from torch.utils.tensorboard import SummaryWriter
 import sys
 sys.path.insert(0, sys.path[0]+"/../")
-from models.model import MLP, HIST, GRU, LSTM, GAT, ALSTM, SFM, RSR
+from models.model import MLP, HIST, GRU, LSTM, GAT, RSR
 from utils.utils import metric_fn, mse, loss_ic, pair_wise_loss, NDCG_loss, ApproxNDCG_loss
 from utils.dataloader import create_mto_loaders
 import warnings
@@ -43,12 +43,6 @@ def get_model(model_name):
 
     if model_name.upper() == 'GATS':
         return GAT
-
-    if model_name.upper() == 'SFM':
-        return SFM
-
-    if model_name.upper() == 'ALSTM':
-        return ALSTM
 
     if model_name.upper() == 'HIST':
         return HIST

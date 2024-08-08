@@ -21,7 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 from collections import defaultdict
 sys.path.insert(0, sys.path[0] + "/../")
-from models.model import HIST, GRU, LSTM, GAT, ALSTM, RSR
+from models.model import HIST, GRU, LSTM, GAT, RSR
 from models.sub_task_models import regression_submodel, classification_submodel
 from utils.utils import cross_entropy, generate_label, evaluate_mc, class_approxNDCG, \
     mse, metric_fn_mto, DoubleBuffer, pair_wise_loss
@@ -29,8 +29,6 @@ from utils.dataloader import create_mto_loaders
 from utils.weight_methods import METHODS, WeightMethods
 import warnings
 import logging
-from torchsummary import summary
-
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
