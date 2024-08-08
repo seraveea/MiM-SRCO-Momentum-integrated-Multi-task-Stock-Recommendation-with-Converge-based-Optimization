@@ -576,7 +576,7 @@ class PCGrad(WeightMethod):
         return None, {}  # NOTE: to align with all other weight methods
 
 
-class OurMethod_III(WeightMethod):
+class OurMethod(WeightMethod):
     def __init__(self, n_tasks: int, device: torch.device):
         super().__init__(n_tasks, device=device)
         self.step = 0
@@ -611,14 +611,16 @@ class OurMethod_III(WeightMethod):
 
         shared_grads, flatten_grads, shapes = [], [], []
         for i, l in enumerate(losses):
-            g = torch.autograd.grad(l, shared_parameters, retain_graph=True)
+            g = torch.autograd.grad(l, shared_parameters, retain_graph=True, allow_unused=True)
+            for param, grad in zip(shared_parameters, g):
+                if grad == None:
+                    print(f"Gradient is None for parameter: {param.shape}")
             shared_grads.append(g)
             flatten_grad, shape = self._flatten_grad(shared_grads[i])
             flatten_grads.append(flatten_grad)
             shapes.append(shape)
 
         flatten_grads = torch.stack(flatten_grads, dim=0)
-        # 过拟合了，drop会变小，正常的时候drop会变大, 让正常的那一组的beta变得很小
         relative_loss_drop = torch.sigmoid(torch.tensor(relative_loss_drop,
                                                         dtype=torch.float32, device=flatten_grads.device))
         # what if the both tasks are over fit, the drop all decrease?
@@ -677,7 +679,6 @@ class OurMethod_III(WeightMethod):
         l2_param = torch.sigmoid(torch.tensor(-sum(relative_loss_drop)/len(relative_loss_drop),
                                 dtype=torch.float32, device=losses.device)) * 1e-3
         optimizer.param_groups[0]['weight_decay'] = l2_param
-        # 过拟合时，relative drop会变小， 提高l2 regularization
         return None, beta  # NOTE: to align with all other weight methods
 
 
@@ -1263,5 +1264,5 @@ METHODS = dict(
     famo=FAMO,
     alignmtl=AlignedMTL,
     dbmtl=DB_MTL,
-    our_method=OurMethod_III
+    our_method=OurMethod
 )

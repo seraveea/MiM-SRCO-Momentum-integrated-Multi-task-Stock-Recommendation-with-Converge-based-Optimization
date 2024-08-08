@@ -320,6 +320,7 @@ def onehot_from_logits(logits):
     argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
     return argmax_acs
 
+
 MAX_ITER = 250
 STOP_CRIT = 1e-5
 

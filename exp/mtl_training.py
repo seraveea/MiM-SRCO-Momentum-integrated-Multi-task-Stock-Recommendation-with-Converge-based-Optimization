@@ -21,8 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 from collections import defaultdict
 sys.path.insert(0, sys.path[0] + "/../")
-from models.model import MLP, HIST, GRU, LSTM, GAT, ALSTM, SFM, RSR
-from models.PatchTST import Model as PatchTST
+from models.model import HIST, GRU, LSTM, GAT, ALSTM, RSR
 from models.sub_task_models import regression_submodel, classification_submodel
 from utils.utils import cross_entropy, generate_label, evaluate_mc, class_approxNDCG, \
     mse, metric_fn_mto, DoubleBuffer, pair_wise_loss
@@ -30,6 +29,7 @@ from utils.dataloader import create_mto_loaders
 from utils.weight_methods import METHODS, WeightMethods
 import warnings
 import logging
+from torchsummary import summary
 
 
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
@@ -50,14 +50,14 @@ def get_model(model_name):
     if model_name.upper() == 'GATS':
         return GAT
 
+    if model_name.upper() == 'ALSTM':
+        return ALSTM
+
     if model_name.upper() == 'HIST':
         return HIST
 
     if model_name.upper() == 'RSR':
         return RSR
-
-    if model_name.upper() == 'PATCHTST':
-        return PatchTST
 
     raise ValueError('unknown model name `%s`' % model_name)
 
@@ -132,8 +132,6 @@ def train_epoch(epoch, weight_method, model, model_c, model_r, optimizer, train_
             rep = model(feature, stock2concept_matrix[stock_index], market_value)
         elif args.model_name == 'RSR':
             rep = model(feature, stock2stock_matrix[stock_index][:, stock_index])
-        elif args.model_name == 'PatchTST':
-            rep = model(feature, mask)  # shape [B, rep_len]
         else:
             rep = model(feature)
         #  task one
@@ -207,8 +205,6 @@ def test_epoch(epoch, model, model_c, model_r, test_loader, writer, args, stock2
                 rep = model(feature, stock2concept_matrix[stock_index], market_value)
             elif args.model_name == 'RSR':
                 rep = model(feature, stock2stock_matrix[stock_index][:, stock_index])
-            elif args.model_name == 'PatchTST':
-                rep = model(feature, mask)  # shape [B, rep_len]
             else:
                 rep = model(feature)
             out_1 = model_c(rep)
@@ -244,15 +240,8 @@ def test_epoch(epoch, model, model_c, model_r, test_loader, writer, args, stock2
     precision, recall, ic, rank_ic, ndcg = metric_fn_mto(preds, pred_column='pred_score',
                                                          gt_column='ground_truth_score')
 
-    '''
-    分数应该可以反应两个模型的训练结果，但是如何选择最佳模型，如何分配分数？
-    或者记录两个分数？
-    '''
     score_c = acc
     score_r = rank_ic
-
-    # scores = (precision[3] + precision[5] + precision[10] + precision[30])/4.0
-    # scores = -1.0 * mse
 
     writer.add_scalar(prefix + '/Classification Loss', np.mean(losses_s1), epoch)
     writer.add_scalar(prefix + '/std(Classification Loss)', np.std(losses_s1), epoch)
@@ -287,8 +276,6 @@ def inference(model, model_c, model_r, data_loader, stock2concept_matrix=None, s
                 rep = model(feature, stock2concept_matrix[stock_index], market_value)
             elif args.model_name == 'RSR':
                 rep = model(feature, stock2stock_matrix[stock_index][:, stock_index])
-            elif args.model_name == 'PatchTST':
-                rep = model(feature, mask)  # shape [B, rep_len]
             else:
                 rep = model(feature)
             out_1 = model_c(rep)
@@ -338,6 +325,7 @@ def main(args):
         stock2stock_matrix = torch.Tensor(stock2stock_matrix).to(device)
         num_relation = stock2stock_matrix.shape[2]
 
+
     all_acc = []
     all_macrof1 = []
     all_precision = []
@@ -347,9 +335,7 @@ def main(args):
     all_ic = []
     all_rank_ic = []
     all_ndcg = []
-    if args.model_name == 'PatchTST':
-        rep_len = args.hidden_size * int((args.seq_len - 16) / 8 + 2) * 6
-    elif args.model_name == 'RSR':
+    if args.model_name == 'RSR':
         rep_len = args.hidden_size * 2
     else:
         rep_len = args.hidden_size
@@ -368,8 +354,6 @@ def main(args):
             model = get_model(args.model_name)(args)
         elif args.model_name == 'RSR':
             model = get_model(args.model_name)(args, num_relation=num_relation)
-        elif args.model_name == 'PatchTST':
-            model = get_model(args.model_name)(args)
         else:
             model = get_model(args.model_name)(args, d_feat=args.d_feat, num_layers=args.num_layers)
 
@@ -553,9 +537,6 @@ def main(args):
             res[name + '-Avg Precision'] = average_precision
             res[name + '-Micro F1'] = f1_micro
             res[name + '-Macro F1'] = f1_macro
-            # res[name + 'Precision@N'] = precision
-            # res[name + 'Recall@N'] = recall
-            # res[name + 'NDCG@N'] = ndcg
 
             # pred.to_pickle(output_path+'/pred.pkl.'+name+str(times))
 
@@ -623,7 +604,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # model
-    parser.add_argument('--model_name', default='HIST')
+    parser.add_argument('--model_name', default='PatchTST')
     parser.add_argument('--d_feat', type=int, default=6)
     parser.add_argument('--hidden_size', type=int, default=128)
     parser.add_argument('--num_layers', type=int, default=2)
@@ -632,7 +613,6 @@ def parse_args():
 
     # for loss function setting
     parser.add_argument('--loss_type', default='mixed', help='choose mixed or pair_wise')
-    parser.add_argument('--gumble', default=False)
     parser.add_argument('--num_class', default=5, help='the number of class of stock sequence')
     parser.add_argument('--topk', default=50, help='the number of computing NDCG@k, works when adaptive_k False')
     parser.add_argument('--adaptive_k', default=True)
@@ -645,32 +625,11 @@ def parse_args():
     # for ts lib model
     parser.add_argument('--task_name', type=str, default='rep_learning', help='task setup')
     parser.add_argument('--seq_len', type=int, default=60)
-    parser.add_argument('--moving_avg', type=int, default=21)
-    parser.add_argument('--output_attention', action='store_true', help='whether to output attention in encoder')
-    parser.add_argument('--embed', type=str, default='timeF',
-                        help='time features encoding, options:[timeF, fixed, learned]')
-    parser.add_argument('--freq', type=str, default='b',
-                        help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
-    parser.add_argument('--distil', action='store_false',
-                        help='whether to use distilling in encoder, using this argument means not using distilling',
-                        default=False)
-    parser.add_argument('--factor', type=int, default=1, help='attn factor')
-    parser.add_argument('--n_heads', type=int, default=2, help='num of heads')
-    parser.add_argument('--d_ff', type=int, default=64, help='dimension of fcn')
-    parser.add_argument('--activation', type=str, default='gelu', help='activation')
-    parser.add_argument('--e_layers', type=int, default=4, help='num of encoder layers')
-    parser.add_argument('--top_k', type=int, default=5, help='for TimesBlock')
-    parser.add_argument('--pred_len', type=int, default=-1, help='the length of pred squence, in regression set to -1')
-    parser.add_argument('--de_norm', default=True, help='de normalize or not')
-    parser.add_argument('--revin', default=False, help='use RevIn or not')
-    parser.add_argument('--affine', default=True, help='use learnable parameters or not in RevIn')
-    parser.add_argument('--subtract_last', default=False, help='subtract_last or not in RevIn')
 
     # training
     parser.add_argument('--n_epochs', type=int, default=100)
     parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--early_stop', type=int, default=30)
-    parser.add_argument('--smooth_steps', type=int, default=5)
     parser.add_argument('--repeat', type=int, default=3)
     parser.add_argument('--analysis_mode', default=False)
 
@@ -701,12 +660,12 @@ def parse_args():
     parser.add_argument('--stock2concept_matrix', default='./data/csi300_stock2concept.npy')
     parser.add_argument('--stock2stock_matrix', default='./data/csi300_multi_stock2stock.npy')
     parser.add_argument('--stock_index', default='./data/csi300_stock_index.npy')
-    parser.add_argument('--outdir', default='./output/rebuttal/k_print_test')
+    parser.add_argument('--outdir', default='./output/k_print_test')
     parser.add_argument('--overwrite', action='store_true', default=False)
     parser.add_argument('--device', default='cuda:2')
 
-    # nash_mtl framework
-    parser.add_argument("--method", type=str, default='ourmethod_iii', choices=list(METHODS.keys()), help="MTL weight method")
+    # mtl methods
+    parser.add_argument("--method", type=str, default='our_method', choices=list(METHODS.keys()), help="MTL weight method")
     parser.add_argument("--update_weights_every", type=int, default=1, help="update task weights every x iterations.")
     parser.add_argument("--c", type=float, default=0.4, help="c for CAGrad alg.")
     parser.add_argument("--dwa_temp", type=float, default=2.0,

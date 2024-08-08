@@ -17,7 +17,6 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 sys.path.insert(0, sys.path[0]+"/../")
 from models.model import MLP, HIST, GRU, LSTM, GAT, ALSTM, SFM, RSR
-from models.PatchTST import Model as PatchTST
 from utils.utils import metric_fn, mse, loss_ic, pair_wise_loss, NDCG_loss, ApproxNDCG_loss
 from utils.dataloader import create_mto_loaders
 import warnings
@@ -38,11 +37,9 @@ def get_model(model_name):
 
     if model_name.upper() == 'LSTM':
         return LSTM
-        # return LSTMModel
 
     if model_name.upper() == 'GRU':
         return GRU
-        # return GRUModel
 
     if model_name.upper() == 'GATS':
         return GAT
@@ -58,9 +55,6 @@ def get_model(model_name):
 
     if model_name.upper() == 'RSR':
         return RSR
-
-    if model_name.upper() == 'PATCHTST':
-        return PatchTST
 
     raise ValueError('unknown model name `%s`'%model_name)
 
@@ -118,8 +112,6 @@ def train_epoch(epoch, model, optimizer, train_loader, writer, args,
             # the stock2concept_matrix has been sort to the order of stock index
         elif args.model_name == 'RSR':
             pred = model(feature, stock2stock_matrix[stock_index][:, stock_index])
-        elif args.model_name == 'PatchTST':
-            pred = model(feature, mask)
         else:
             # other model only use feature as input
             pred = model(feature)
@@ -162,9 +154,6 @@ def test_epoch(epoch, model, test_loader, writer, args, stock2concept_matrix=Non
                 pred = model(feature, stock2concept_matrix[stock_index], market_value)
             elif args.model_name == 'RSR':
                 pred = model(feature, stock2stock_matrix[stock_index][:, stock_index])
-            elif args.model_name == 'PatchTST':
-                # new added
-                pred = model(feature, mask)
             else:
                 pred = model(feature)
 
@@ -204,9 +193,6 @@ def inference(model, data_loader, stock2concept_matrix=None, stock2stock_matrix=
                 pred = model(feature, stock2concept_matrix[stock_index], market_value)
             elif args.model_name == 'RSR':
                 pred = model(feature, stock2stock_matrix[stock_index][:, stock_index])
-            elif args.model_name == 'PatchTST':
-                # new added
-                pred = model(feature, mask)
             else:
                 pred = model(feature)
             preds.append(pd.DataFrame({'score': pred.cpu().numpy(), 'label': label.cpu().numpy(),}, index=index))
@@ -258,17 +244,11 @@ def main(args):
     global_best_score = -np.inf
     for times in range(args.repeat):
         pprint('create model...')
-        if args.model_name == 'SFM':
-            model = get_model(args.model_name)(d_feat=args.d_feat, output_dim=32, freq_dim=25, hidden_size=args.hidden_size, dropout_W=0.5, dropout_U=0.5, device=device)
-        elif args.model_name == 'ALSTM':
-            model = get_model(args.model_name)(args.d_feat, args.hidden_size, args.num_layers, args.dropout, 'LSTM')
-        elif args.model_name == 'HIST':
+        if args.model_name == 'HIST':
             # model = get_model(args.model_name)(d_feat=args.d_feat, num_layers=args.num_layers, K=args.K)
             model = get_model(args.model_name)(args)
         elif args.model_name == 'RSR':
             model = get_model(args.model_name)(args, num_relation=num_relation)
-        elif args.model_name == 'PatchTST':
-            model = get_model(args.model_name)(args)
         else:
             model = get_model(args.model_name)(args, d_feat=args.d_feat, num_layers=args.num_layers)
         
@@ -332,8 +312,7 @@ def main(args):
             # do prediction on train, valid and test data
             pred = inference(model, eval(name+'_loader'), stock2concept_matrix=stock2concept_matrix,
                              stock2stock_matrix=stock2stock_matrix)
-            # save the pkl every repeat time
-            pred.to_pickle(output_path+'/pred.pkl.'+name+str(times))
+            # pred.to_pickle(output_path+'/pred.pkl.'+name+str(times))
 
             precision, recall, ic, rank_ic, ndcg = metric_fn(pred)
 
@@ -406,26 +385,8 @@ def parse_args():
     parser.add_argument('--dropout', type=float, default=0.1)
     parser.add_argument('--K', type=int, default=1)
     parser.add_argument('--loss_type', default='')
-    # ts-lib model only
     parser.add_argument('--seq_len', type=int, default=60)
-    parser.add_argument('--moving_avg', type=int, default=21)
-    parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
-    parser.add_argument('--embed', type=str, default='timeF',
-                        help='time features encoding, options:[timeF, fixed, learned]')
-    parser.add_argument('--freq', type=str, default='b',
-                        help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
-    parser.add_argument('--distil', action='store_false',
-                        help='whether to use distilling in encoder, using this argument means not using distilling',
-                        default=False)
-    parser.add_argument('--factor', type=int, default=1, help='attn factor')
-    parser.add_argument('--n_heads', type=int, default=2, help='num of heads')
-    parser.add_argument('--d_ff', type=int, default=64, help='dimension of fcn')
-    parser.add_argument('--activation', type=str, default='gelu', help='activation')
-    parser.add_argument('--e_layers', type=int, default=4, help='num of encoder layers')
-    parser.add_argument('--top_k', type=int, default=5, help='for TimesBlock')
     parser.add_argument('--task_name', type=str, default='regression', help='task setup')
-    parser.add_argument('--pred_len', type=int, default=-1, help='the length of pred squence, in regression set to -1')
-    parser.add_argument('--de_norm', default=True, help='de normalize or not')
 
     # training
     parser.add_argument('--n_epochs', type=int, default=100)
@@ -434,11 +395,6 @@ def parse_args():
     parser.add_argument('--smooth_steps', type=int, default=5)
     parser.add_argument('--metric', default='IC')
     parser.add_argument('--repeat', type=int, default=3)
-
-    # for REVin normalize
-    parser.add_argument('--revin', default=False, help='use RevIn or not')
-    parser.add_argument('--affine', default=True, help='use learnable parameters or not in RevIn')
-    parser.add_argument('--subtract_last', default=False, help='subtract_last or not in RevIn')
 
     # data
     parser.add_argument('--data_set', type=str, default='csi300')
@@ -476,9 +432,6 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    """
-    for prediction, maybe repeat 5, early_stop 10 is enough
-    """
     args = parse_args()
     device = args.device if torch.cuda.is_available() else 'cpu'
     main(args)

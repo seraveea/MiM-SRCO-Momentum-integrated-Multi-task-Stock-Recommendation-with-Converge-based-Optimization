@@ -239,9 +239,6 @@ def create_mto_loaders(args, device):
     :return:
     """
     df_original = pd.read_pickle(args.mtm_source_path)
-    # df_train = pd.read_pickle('./data/train_mtm_original.pkl')
-    # df_valid = pd.read_pickle('./data/valid_mtm_original.pkl')
-    # df_test = pd.read_pickle('./data/test_mtm_original.pkl')
 
     # split those three dataset into train, valid and test
     # import pickle5 as pickle
@@ -300,10 +297,6 @@ def create_mtm_loaders(args, device):
     """
     df_original = pd.read_pickle(args.mtm_source_path)
 
-    # df_train = pd.read_pickle('./data/train_mtm_original.pkl')
-    # df_valid = pd.read_pickle('./data/valid_mtm_original.pkl')
-    # df_test = pd.read_pickle('./data/test_mtm_original.pkl')
-
     # split those three dataset into train, valid and test
     # import pickle5 as pickle
     import pickle
@@ -352,9 +345,6 @@ def create_mtm_loaders(args, device):
                              device=device,task='multi-class')
 
     return train_loader, valid_loader, test_loader
-
-
-
 
 
 def bin_helper(x):

@@ -1,6 +1,7 @@
-*.ipynb
+exp/*.ipynb
 data
 output
+scripts
 pred_output
 .idea
 .ipynb_checkpoints
