@@ -33,8 +33,9 @@ python exp/regression_training.py --model_name ALSTM --outdir [target_location] 
 python exp/classification_training.py --model_name ALSTM --outdir [target_location] --repeat 3 --device cuda:1 --mtm_source_path ./data/csi100_mtm.pkl
 ```
 
-### To transfer to rise-or-fall task, add ```--mtm_column mtm0101```
-### To use cross-entropy or pair-wise loss function, add ```--loss_type cross-entropy``` or  ```--loss_type pair-wise```
+To transfer to rise-or-fall task, add ```--mtm_column mtm0101```
+
+To use cross-entropy or pair-wise loss function, add ```--loss_type cross-entropy``` or  ```--loss_type pair-wise```
 
 
 Thanks to the following open-source repositories:
