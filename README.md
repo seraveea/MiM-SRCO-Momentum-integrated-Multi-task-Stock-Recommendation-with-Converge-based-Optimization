@@ -7,7 +7,7 @@ Create a Python 3.8 environment using [requirements.txt](requirements.txt)
 Training Data will be shared by Google Drive link after rebuttal.
 
 ### Reproduce the result
-change [backbone] to [GRU, LSTM, GATs, RSR, HIST]
+change [backbone] to one from: [GRU, LSTM, GATs, RSR, HIST]
 ```
 # For CSI300 dataset
 python exp/mtl_training.py --method our_method --device cuda:0 --ndcg approx --adaptive_k True --loss_type mixed --outdir [target_location] --mtm_source_path --model_name [backbone] --class_weight_method square
@@ -16,7 +16,7 @@ python exp/mtl_training.py --method our_method --device cuda:0 --ndcg approx --a
 ```
 
 ### MTL Baselines
-change [baseline] to [nashmtl, cagrad, dbmtl, uniw]
+change [baseline] to one from: [nashmtl, cagrad, dbmtl, uniw]
 ```
 # For CSI300 dataset
 python exp/mtl_training.py --method [baseline] --device cuda:0 --ndcg approx --adaptive_k True --loss_type mixed --outdir [target_location] --mtm_source_path --model_name [backbone] --class_weight_method square
