@@ -1,4 +1,4 @@
-# MiM-SRCO: Momentum-integrated Multi-task Stock Recommendation with Converge-based Optimization
+# MiM-StocR: Momentum-integrated Multi-task Stock Recommendation with Converge-based Optimization
 ## An Official Implementation for KDD-25 submission
 
 ### Environment
